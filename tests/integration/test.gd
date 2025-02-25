@@ -1,12 +1,5 @@
 extends GutTest
 
-signal selected
-signal deselected
-# Подготовка тестовой среды
-func before_all():
-	var _movement = load("res://source/match/units/traits/Movement.gd")
-	print("Запуск before_all()")
-
 func test_testing():
 	pass_test("Done.")
 
@@ -24,23 +17,43 @@ func test_unit_selection_and_movement():
 	await get_tree().process_frame
 	await get_tree().create_timer(1.0).timeout
 	assert_true(is_selected, "Юнит должен быть выделен после сигнала 'selected'")
-
-	# Симулируем перемещение юнита
-	unit.find_child("Movement")
-	
-	# Обработчики сигналов
-	unit.connect("selected", func(): is_selected = true)
-	unit.connect("deselected", func(): is_selected = false)
-	await get_tree().process_frame
-	await get_tree().create_timer(1.0).timeout
-	assert_eq(unit.global_transform.origin, target_position, "Юнит должен переместиться в целевую позицию")
+	assert_eq(unit.location, target_position, "Юнит должен переместиться в целевую позицию")
 
 	# Симулируем снятие выделения
 	unit.emit_signal("deselected")
-	#await get_tree().process_frame
-	#await get_tree().create_timer(1.0).timeout
 	assert_false(is_selected, "Юнит должен быть снят с выделения после сигнала 'deselected'")
 	
-	print("Тест начался")
-	pass_test(100)  # Завершаем тест принудительно
-	print("Тест завершён")
+func test_group_selection():
+	var unit1 = load("res://source/match/units/Worker.gd")
+	var unit2 = load("res://source/match/units/Tank.gd")
+	var selected_units = []
+
+	unit1.connect("selected", func(): selected_units.append(unit1))
+	unit2.connect("selected", func(): selected_units.append(unit2))
+
+	# Симуляция группового выделения
+	unit1.emit_signal("selected")
+	unit2.emit_signal("selected")
+
+	assert_eq(selected_units.size(), 2, "Должны быть выделены два юнита")
+	assert_true(unit1 in selected_units, "Юнит 1 должен быть в списке выделенных")
+	assert_true(unit2 in selected_units, "Юнит 2 должен быть в списке выделенных")
+
+func test_auto_attack():
+	var attacker = load("res://source/match/units/Tank.gd")
+	var enemy = load("res://source/match/units/Worker.gd")
+	var enemy_hp_before = enemy.hp
+	
+	# Запускаем автоатаку
+	attacker.target_unit = enemy
+	
+	assert_lt(enemy.hp, enemy_hp_before, "После атаки HP врага должно уменьшиться")
+
+func test_building_construction():
+	# Симулируем команду на строительство
+	var command_center = load("res://source/match/units/CommandCenter.gd")
+	command_center.construct(10)
+	# Ждём завершения строительства
+	await get_tree().create_timer(command_center.build_time).timeout
+
+	assert_true(command_center.constructed, "Здание должно быть построено после завершения строительства")
