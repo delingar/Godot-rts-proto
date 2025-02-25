@@ -7,7 +7,7 @@ var options = (
 	if ResourceLoader.exists(Constants.OPTIONS_FILE_PATH)
 	else Options.new()
 )
-var god_mode = false
+var god_mode = true
 var cache = {}
 
 
